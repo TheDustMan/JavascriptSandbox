@@ -1,23 +1,36 @@
-import Scene1 from './scene.js';
+import Scene1 from './scene1.js';
+import Scene2 from './scene2.js';
+
+const Stats = require('stats-js')
 
 export default class Application {
     constructor(renderElementId)
     {
         this.canvas = document.getElementById(renderElementId);
         this.engine = new BABYLON.Engine(this.canvas);
-        this.scene = new Scene1(this.engine);
-
+        this.scene = new Scene2(this.engine);
         this.time = new Date().getTime();
+
+        this.stats = new Stats();
+        this.stats.setMode(0);
+        this.stats.domElement.style.position = 'absolute';
+        this.stats.domElement.style.left = '10px';
+        this.stats.domElement.style.top = '10px';
+        document.body.appendChild(this.stats.domElement);
     }
 
     run()
     {
         this.engine.runRenderLoop(() => {
-            let currentTime = new Date().getTime();
-            let time_delta_ms = currentTime - self.time;
-            self.time = currentTime;
+            this.stats.begin();
             
-            this.scene.render(time_delta_ms);
+            let currentTime = new Date().getTime();
+            let timeDelta = currentTime - this.time;
+            this.time = currentTime;
+            
+            this.scene.render(timeDelta);
+
+            this.stats.end();
         });
     }
     

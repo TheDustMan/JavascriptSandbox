@@ -11,5 +11,12 @@
   ],
   "author": "Dustin Aguilar",
   "license": "ISC",
-  "devDependencies": {}
+  "devDependencies": {
+    "rollup-plugin-node-resolve": "^3.4.0"
+  },
+  "dependencies": {
+    "babylonjs": "^3.3.0",
+    "requirejs": "^2.3.6",
+    "stats-js": "^1.0.0-alpha1"
+  }
 }
