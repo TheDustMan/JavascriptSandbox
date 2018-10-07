@@ -5,6 +5,7 @@ export default class Scene2 {
         this.camera = null;
         this.light = null;
         this.spawner = null;
+        this.extractor = null;
 
         this.build(engine);        
     }
@@ -15,6 +16,7 @@ export default class Scene2 {
             return;
         }
         this.spawner.update(deltaTime);
+        this.extractor.update(deltaTime);
         this.scene.render();
     }
 
@@ -26,7 +28,17 @@ export default class Scene2 {
         this.camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 0, -100), this.scene);
         this.light = new BABYLON.PointLight("light", new BABYLON.Vector3(10, 10, 0), this.scene);
 
-        this.spawner = new Spawner(null, [0, 0, 0], [1, 200, 1], 1, 10, this.scene);
+        this.spawner = new Spawner(null,
+                                   new BABYLON.Vector3(0, 0, 0),
+                                   new BABYLON.Vector3(1, 200, 1),
+                                   1,
+                                   10,
+                                   this.scene);
+        this.extractor = new Extractor(this.spawner,
+                                       new BABYLON.Vector3(0, 0, 0),
+                                       new BABYLON.Vector3(1, 0, 0),
+                                       1,
+                                       1);
     }
 }
 
@@ -53,12 +65,15 @@ class Particle {
 }
 
 class Extractor {
-    constructor(spawner, direction, rate, memory)
+    constructor(spawner, origin, direction, rate, memory, scene)
     {
         this.spawner = spawner;
+        this.origin = origin;
         this.direction = direction;
         this.rate = rate;
         this.memory = memory;
+
+        this.build(scene);
     }
 
     build(scene)
@@ -66,7 +81,7 @@ class Extractor {
         
     }
 
-    render(timeDel)
+    update(timeDelta)
     {
         
     }
@@ -79,16 +94,16 @@ class Spawner {
         this.position = position;
         this.dimensions = dimensions;
         this.cellSize = cellSize;
-        this.currentSpawnerPosition = [0,0,0];
+        this.currentSpawnerPosition = new BABYLON.Vector3(0, 0, 0);
         this.updateRate = updateRate; // in milliseconds
         this.currentTime = 0;
 
         this.cells = [];
-        for (let i = 0; i < this.dimensions[0]; ++i) {
+        for (let i = 0; i < this.dimensions.x; ++i) {
             this.cells.push([]);
-            for (let j = 0; j < this.dimensions[1]; ++j) {
+            for (let j = 0; j < this.dimensions.y; ++j) {
                 this.cells[i].push([])
-                for (let k = 0; k < this.dimensions[2]; ++k) {
+                for (let k = 0; k < this.dimensions.z; ++k) {
                     this.cells[i][j].push(null)
                 }
             }
@@ -107,18 +122,23 @@ class Spawner {
             // Figure out where to move to in our grid
             let possiblePositions = this.computePossiblePositions(this.currentSpawnerPosition);
             let index = Math.floor(Math.random() * possiblePositions.length);
-            this.currentSpawnerPosition = possiblePositions[index];
+            let newPosition = possiblePositions[index];
+
+            this.currentSpawnerPosition.set(newPosition[0], newPosition[1], newPosition[2]);
         }
     }
 
     computePossiblePositions(currentPosition)
     {
+        let cPosArr = currentPosition.asArray();
+        let dims = this.dimensions.asArray();
         let comps = [];
-        for (let p = 0; p < currentPosition.length; p++) {
+        
+        for (let p = 0; p < cPosArr.length; p++) {
             let poss = [];
-            let pos = currentPosition[p];
+            let pos = cPosArr[p];
             let dmin = 0;
-            let dmax = this.dimensions[p] - 1;
+            let dmax = dims[p] - 1;
             if (pos > dmin) {
                 poss.push(pos - 1);
             }
@@ -131,8 +151,8 @@ class Spawner {
         // Now we have an array of [[x possibles], [y possibles], [z possibles]]
         const f = (a, b) => [].concat(...a.map(d => b.map(e => [].concat(d, e))));
         const cartesian = (a, b, ...c) => (b ? cartesian(f(a, b), ...c) : a);
-        let prod = cartesian(comps[0], comps[1], comps[2]);
-        return prod;
+
+        return cartesian(comps[0], comps[1], comps[2]);
     }
 
     build(scene)
@@ -141,14 +161,14 @@ class Spawner {
         cellMaterial.emmisiveColor = new BABYLON.Color3(0, 0.58, 0.86);
         cellMaterial.alpha = 0.1;
 
-        for (let i = 0; i < this.dimensions[0]; ++i) {
-            for (let j = 0; j < this.dimensions[1]; ++j) {
-                for (let k = 0; k < this.dimensions[2]; ++k) {
+        for (let i = 0; i < this.dimensions.x; ++i) {
+            for (let j = 0; j < this.dimensions.y; ++j) {
+                for (let k = 0; k < this.dimensions.z; ++k) {
                     let name = "box_" + i + "_" + j + "_" + k;
                     let box = BABYLON.Mesh.CreateBox(name, self.cellSize, scene);
-                    box.position.x = this.position[0] + (this.cellSize * i);
-                    box.position.y = this.position[1] + (this.cellSize * j);
-                    box.position.z = this.position[2] + (this.cellSize * k);
+                    box.position.x = this.position.x + (this.cellSize * i);
+                    box.position.y = this.position.y + (this.cellSize * j);
+                    box.position.z = this.position.z + (this.cellSize * k);
                     box.material = cellMaterial;
                     this.cells[i][j][k] = box;
                 }
@@ -164,8 +184,8 @@ class Spawner {
     update(deltaTime)
     {
         this.computePosition(deltaTime);
-        this.spawner.position.x = this.currentSpawnerPosition[0];
-        this.spawner.position.y = this.currentSpawnerPosition[1];
-        this.spawner.position.z = this.currentSpawnerPosition[2];
+        this.spawner.position.x = this.currentSpawnerPosition.x;
+        this.spawner.position.y = this.currentSpawnerPosition.y;
+        this.spawner.position.z = this.currentSpawnerPosition.z;
     }
 }
