@@ -7,7 +7,7 @@ export default class Scene1 {
         this.light = null;
         this.box = null;
 
-        this.buildScene(engine);
+        this.build(engine);
 
         self.progress = 0;
     }
@@ -20,7 +20,7 @@ export default class Scene1 {
         this.scene.render();
     }
 
-    buildScene(engine)
+    build(engine)
     {
         this.scene = new BABYLON.Scene(engine);
         this.scene.clearColor = new BABYLON.Color3(0.8, 0.8, 0.8);

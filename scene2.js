@@ -6,7 +6,7 @@ export default class Scene2 {
         this.light = null;
         this.spawner = null;
 
-        this.buildScene(engine);        
+        this.build(engine);        
     }
 
     render(timeDelta)
@@ -18,16 +18,16 @@ export default class Scene2 {
         this.scene.render();
     }
 
-    buildScene(engine)
+    build(engine)
     {
         this.scene = new BABYLON.Scene(engine);
         this.scene.clearColor = new BABYLON.Color3(0.9, 0.9, 0.9);
         
-        this.camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 0, -50), this.scene);
+        this.camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 0, -100), this.scene);
         this.light = new BABYLON.PointLight("light", new BABYLON.Vector3(10, 10, 0), this.scene);
 
-        this.spawner = new Spawner(null, [0, 0, 0], [1, 20, 1], 1, 10);
-        this.spawner.draw(this.scene);        
+        this.spawner = new Spawner(null, [0, 0, 0], [1, 200, 1], 1, 10);
+        this.spawner.build(this.scene);
     }
 }
 
@@ -102,7 +102,7 @@ class Spawner {
         return prod;
     }
 
-    draw(scene)
+    build(scene)
     {
         let cellMaterial = new BABYLON.StandardMaterial("boxMaterial", scene);
         cellMaterial.emmisiveColor = new BABYLON.Color3(0, 0.58, 0.86);
