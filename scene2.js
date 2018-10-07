@@ -9,12 +9,12 @@ export default class Scene2 {
         this.build(engine);        
     }
 
-    render(timeDelta)
+    render(deltaTime)
     {
         if (this.scene == null) {
             return;
         }
-        this.spawner.render(timeDelta);
+        this.spawner.update(deltaTime);
         this.scene.render();
     }
 
@@ -26,8 +26,7 @@ export default class Scene2 {
         this.camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 0, -100), this.scene);
         this.light = new BABYLON.PointLight("light", new BABYLON.Vector3(10, 10, 0), this.scene);
 
-        this.spawner = new Spawner(null, [0, 0, 0], [1, 200, 1], 1, 10);
-        this.spawner.build(this.scene);
+        this.spawner = new Spawner(null, [0, 0, 0], [1, 200, 1], 1, 10, this.scene);
     }
 }
 
@@ -40,8 +39,41 @@ class Behavior {
     
 }
 
+class Particle {
+    constructor(origin, velocity)
+    {
+        this.origin = origin;
+        this.velocity = velocity;
+    }
+
+    update()
+    {
+        
+    }
+}
+
+class Extractor {
+    constructor(spawner, direction, rate, memory)
+    {
+        this.spawner = spawner;
+        this.direction = direction;
+        this.rate = rate;
+        this.memory = memory;
+    }
+
+    build(scene)
+    {
+        
+    }
+
+    render(timeDel)
+    {
+        
+    }
+}
+
 class Spawner {
-    constructor(behavior, position, dimensions, cellSize, updateRate)
+    constructor(behavior, position, dimensions, cellSize, updateRate, scene)
     {
         this.behavior = behavior;
         this.position = position;
@@ -63,11 +95,12 @@ class Spawner {
         }
 
         this.spawner = null;
+        this.build(scene);
     }
 
-    computePosition(timeDelta)
+    computePosition(deltaTime)
     {
-        this.currentTime += timeDelta;
+        this.currentTime += deltaTime;
         if (this.currentTime > this.updateRate) {
             this.currentTime -= this.updateRate;
 
@@ -128,9 +161,9 @@ class Spawner {
         this.spawner.material = spawnerMaterial;
     }
     
-    render(timeDelta)
+    update(deltaTime)
     {
-        this.computePosition(timeDelta);
+        this.computePosition(deltaTime);
         this.spawner.position.x = this.currentSpawnerPosition[0];
         this.spawner.position.y = this.currentSpawnerPosition[1];
         this.spawner.position.z = this.currentSpawnerPosition[2];

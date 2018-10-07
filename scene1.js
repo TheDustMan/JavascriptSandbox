@@ -12,9 +12,9 @@ export default class Scene1 {
         self.progress = 0;
     }
 
-    render(time_delta_ms)
+    render(deltaTime)
     {
-        self.progress += 0.1;
+        self.progress += deltaTime / 100;
         this.box.rotation.y = self.progress * 2;
         this.box.position.x = Math.sin(self.progress % 1);
         this.scene.render();

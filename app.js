@@ -25,10 +25,10 @@ export default class Application {
             this.stats.begin();
             
             let currentTime = new Date().getTime();
-            let timeDelta = currentTime - this.time;
+            let deltaTime = currentTime - this.time;
             this.time = currentTime;
             
-            this.scene.render(timeDelta);
+            this.scene.render(deltaTime);
 
             this.stats.end();
         });
