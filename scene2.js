@@ -4,8 +4,8 @@ export default class Scene2 {
         this.scene = null;
         this.camera = null;
         this.light = null;
-        this.spawner = null;
-        this.extractor = null;
+        this.spawners = [];
+        this.extractors = [];
 
         this.build(engine, canvas);
     }
@@ -15,8 +15,14 @@ export default class Scene2 {
         if (this.scene == null) {
             return;
         }
-        this.spawner.update(deltaTime);
-        this.extractor.update(deltaTime);
+
+        for (let i = 0; i < this.spawners.length; ++i) {
+            this.spawners[i].update(deltaTime);
+        }
+        for (let i = 0; i < this.extractors.length; ++i) {
+            this.extractors[i].update(deltaTime);
+        }
+
         this.scene.render();
     }
 
@@ -31,29 +37,136 @@ export default class Scene2 {
         
         this.light = new BABYLON.PointLight("light", new BABYLON.Vector3(10, 10, 0), this.scene);
 
-        this.spawner = new Spawner(null,
+        let spawner1 = new Spawner(new SawtoothBehavior(new BABYLON.Vector3(0, 5, 0)),
                                    new BABYLON.Vector3(0, 0, 0),
                                    new BABYLON.Vector3(1, 200, 1),
                                    1,
                                    10,
                                    this.scene);
-        this.extractor = new Extractor(this.spawner,
+        let extractor1 = new Extractor(spawner1,
                                        new BABYLON.Vector3(0, 0, 0),
-                                       new BABYLON.Vector3(1, 0, 0),
+                                       [new BABYLON.Vector3(1, 0, 0),
+                                        new BABYLON.Vector3(1, 0, 1),
+                                        new BABYLON.Vector3(1, 0, -1),
+                                        new BABYLON.Vector3(-1, 0, 0),
+                                        new BABYLON.Vector3(-1, 0, -1),
+                                        new BABYLON.Vector3(-1, 0, 1),
+                                        new BABYLON.Vector3(0, 0, -1),
+                                        new BABYLON.Vector3(0, 0, 1)],
                                        1,
                                        4,
                                        500,
                                        this.scene);
+
+        let spawner2 = new Spawner(new RandomBehavior(new BABYLON.Vector3(0, 5, 0)),
+                                   new BABYLON.Vector3(0, 0, 0),
+                                   new BABYLON.Vector3(1, 200, 1),
+                                   1,
+                                   10,
+                                   this.scene);
+        let extractor2 = new Extractor(spawner2,
+                                       new BABYLON.Vector3(0, 0, 0),
+                                       [new BABYLON.Vector3(1, 0, 0),
+                                        new BABYLON.Vector3(1, 0, 1),
+                                        new BABYLON.Vector3(1, 0, -1),
+                                        new BABYLON.Vector3(-1, 0, 0),
+                                        new BABYLON.Vector3(-1, 0, -1),
+                                        new BABYLON.Vector3(-1, 0, 1),
+                                        new BABYLON.Vector3(0, 0, -1),
+                                        new BABYLON.Vector3(0, 0, 1)],
+                                       1,
+                                       4,
+                                       500,
+                                       this.scene);
+
+        
+        this.spawners.push(spawner1);
+        this.extractors.push(extractor1);
+        this.spawners.push(spawner2);
+        this.extractors.push(extractor2);
+        
     }
 }
 
-class Behavior {
-    constructor()
+class SawtoothBehavior {
+    constructor(velocity)
     {
-
+        this.velocity = velocity;
     }
 
-    
+    determineNextPosition(currentPosition, dimensions)
+    {
+        let nextX = currentPosition.x;
+        let nextY = currentPosition.y;
+        let nextZ = currentPosition.z;
+        let rawNextPosition = currentPosition.add(this.velocity);
+
+        if (rawNextPosition.x < dimensions.x &&
+            rawNextPosition.x >= 0) {
+            nextX = rawNextPosition.x;
+        } else {
+            this.velocity.x *= -1;
+        }
+       
+        if (rawNextPosition.y < dimensions.y &&
+            rawNextPosition.y >= 0) {
+            nextY = rawNextPosition.y;
+        } else {
+            this.velocity.y *= -1;
+        }
+
+        if (rawNextPosition.z < dimensions.z &&
+            rawNextPosition.z >= 0) {
+            nextZ = rawNextPosition.z;
+        } else {
+            this.velocity.z *= -1;
+        }
+
+        return new BABYLON.Vector3(nextX, nextY, nextZ);
+    }
+}
+
+class RandomBehavior {
+    constructor()
+    {
+    }
+
+    determineNextPosition(currentPosition, dimensions)
+    {
+        let possiblePositions = this.computePossiblePositions(currentPosition, dimensions);
+        let index = Math.floor(Math.random() * possiblePositions.length);
+        let newPosition = possiblePositions[index];
+
+        return BABYLON.Vector3.FromArray(newPosition);
+    }
+
+    computePossiblePositions(currentPosition, dimensions)
+    {
+        let cPosArr = currentPosition.asArray();
+        let dims = dimensions.asArray();
+        let comps = [];
+        
+        for (let p = 0; p < cPosArr.length; p++) {
+            let poss = [];
+            let pos = cPosArr[p];
+            let dmin = 0;
+            let dmax = dims[p] - 1;
+            if (pos > dmin) {
+                poss.push(pos - 1);
+            }
+            poss.push(pos);
+            if (pos < dmax) {
+                poss.push(pos + 1);
+            }
+            comps.push(poss);
+        }
+        // Now we have an array of [[x possibles], [y possibles], [z possibles]]
+        const f = (a, b) => [].concat(...a.map(d => b.map(e => [].concat(d, e))));
+        const cartesian = (a, b, ...c) => (b ? cartesian(f(a, b), ...c) : a);
+
+        return cartesian(comps[0], comps[1], comps[2]);
+    }
+
 }
 
 class Particle {
@@ -82,50 +195,59 @@ class Particle {
 }
 
 class Extractor {
-    constructor(spawner, origin, direction, rate, scale, memory, scene)
+    constructor(spawner, origin, directions, rate, scale, memory, scene)
     {
         this.spawner = spawner;
         this.origin = origin;
-        this.direction = direction;
+        this.directions = directions;
         this.rate = rate;
         this.scale = scale;
         this.memory = memory;
         this.points = [];
         this.colors = [];
-        this.lines = null;
+        this.lines = [];
         
         this.build(scene);
     }
 
     build(scene)
     {
-        for (let i = 1; i <= this.memory; ++i) {
-            let offset = this.direction.scale(this.scale * i);
-            let point = this.origin.add(offset);
-            this.points.push(point);
-            this.colors.push(new BABYLON.Color4(0.5, 0.5, i / this.memory, 1.0));
-        }
+        for (let d in this.directions) {
+            let points = [];
+            let colors = [];
 
-        this.lines = BABYLON.MeshBuilder.CreateLines("lines",
-                                                     {
-                                                         points: this.points,
-                                                         colors: this.colors,
-                                                         updatable: true
-                                                     },
-                                                     scene);
+            for (let i = 1; i <= this.memory; ++i) {
+                let offset = this.directions[d].scale(this.scale * i);
+                let point = this.origin.add(offset);
+                points.push(point);
+                colors.push(new BABYLON.Color4(0.5, 0.5, i / this.memory, 1.0));
+            }
+            this.points.push(points);
+            this.colors.push(colors);
+
+            this.lines.push(BABYLON.MeshBuilder.CreateLines("lines",
+                                                            {
+                                                                points: points,
+                                                                colors: colors,
+                                                                updatable: true
+                                                            },
+                                                            scene));
+        }
     }
 
     update(timeDelta)
     {
-        for (let i = this.points.length - 1; i > 0; --i) {
-            this.points[i].copyFrom(this.points[i - 1]).addInPlace(this.direction.scale(this.scale));
+        for (let d in this.directions) {
+            for (let p = this.points[d].length - 1; p > 0; --p) {
+                this.points[d][p].copyFrom(this.points[d][p - 1]).addInPlace(this.directions[d].scale(this.scale));
+            }
+            this.points[d][0].copyFrom(this.spawner.currentSpawnerPosition.add(this.origin).addInPlace(this.directions[d].scale(this.scale)));
+            this.lines[d] = BABYLON.MeshBuilder.CreateLines("lines",
+                                                            {
+                                                                points: this.points[d],
+                                                                instance: this.lines[d]
+                                                            });
         }
-        this.points[0].copyFrom(this.spawner.currentSpawnerPosition.add(this.origin).addInPlace(this.direction.scale(this.scale)));
-        this.lines = BABYLON.MeshBuilder.CreateLines("lines",
-                                                     {
-                                                         points: this.points,
-                                                         instance: this.lines
-                                                     });
     }
 }
 
@@ -161,40 +283,10 @@ class Spawner {
         if (this.currentTime > this.updateRate) {
             this.currentTime -= this.updateRate;
 
-            // Figure out where to move to in our grid
-            let possiblePositions = this.computePossiblePositions(this.currentSpawnerPosition);
-            let index = Math.floor(Math.random() * possiblePositions.length);
-            let newPosition = possiblePositions[index];
-
-            this.currentSpawnerPosition.set(newPosition[0], newPosition[1], newPosition[2]);
+            let nextPosition = this.behavior.determineNextPosition(this.currentSpawnerPosition,
+                                                                   this.dimensions);
+            this.currentSpawnerPosition.copyFrom(nextPosition);
         }
-    }
-
-    computePossiblePositions(currentPosition)
-    {
-        let cPosArr = currentPosition.asArray();
-        let dims = this.dimensions.asArray();
-        let comps = [];
-        
-        for (let p = 0; p < cPosArr.length; p++) {
-            let poss = [];
-            let pos = cPosArr[p];
-            let dmin = 0;
-            let dmax = dims[p] - 1;
-            if (pos > dmin) {
-                poss.push(pos - 1);
-            }
-            poss.push(pos);
-            if (pos < dmax) {
-                poss.push(pos + 1);
-            }
-            comps.push(poss);
-        }
-        // Now we have an array of [[x possibles], [y possibles], [z possibles]]
-        const f = (a, b) => [].concat(...a.map(d => b.map(e => [].concat(d, e))));
-        const cartesian = (a, b, ...c) => (b ? cartesian(f(a, b), ...c) : a);
-
-        return cartesian(comps[0], comps[1], comps[2]);
     }
 
     build(scene)
