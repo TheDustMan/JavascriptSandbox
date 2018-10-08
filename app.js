@@ -8,7 +8,7 @@ export default class Application {
     {
         this.canvas = document.getElementById(renderElementId);
         this.engine = new BABYLON.Engine(this.canvas);
-        this.scene = new Scene2(this.engine);
+        this.scene = new Scene2(this.engine, this.canvas);
         this.time = new Date().getTime();
 
         this.stats = new Stats();

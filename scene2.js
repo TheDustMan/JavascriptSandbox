@@ -1,5 +1,5 @@
 export default class Scene2 {
-    constructor(engine)
+    constructor(engine, canvas)
     {
         this.scene = null;
         this.camera = null;
@@ -7,7 +7,7 @@ export default class Scene2 {
         this.spawner = null;
         this.extractor = null;
 
-        this.build(engine);        
+        this.build(engine, canvas);
     }
 
     render(deltaTime)
@@ -20,12 +20,15 @@ export default class Scene2 {
         this.scene.render();
     }
 
-    build(engine)
+    build(engine, canvas)
     {
         this.scene = new BABYLON.Scene(engine);
         this.scene.clearColor = new BABYLON.Color3(0.9, 0.9, 0.9);
         
-        this.camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 0, -100), this.scene);
+        this.camera = new BABYLON.ArcRotateCamera("camera", 0, 0, 10, new BABYLON.Vector3(0, 0, -500), this.scene);
+        this.camera.setTarget(BABYLON.Vector3.Zero());
+        this.camera.attachControl(canvas, true);
+        
         this.light = new BABYLON.PointLight("light", new BABYLON.Vector3(10, 10, 0), this.scene);
 
         this.spawner = new Spawner(null,
@@ -38,7 +41,9 @@ export default class Scene2 {
                                        new BABYLON.Vector3(0, 0, 0),
                                        new BABYLON.Vector3(1, 0, 0),
                                        1,
-                                       1);
+                                       4,
+                                       500,
+                                       this.scene);
     }
 }
 
@@ -52,38 +57,75 @@ class Behavior {
 }
 
 class Particle {
-    constructor(origin, velocity)
+    constructor(origin, offset)
     {
         this.origin = origin;
-        this.velocity = velocity;
+        this.offset = offset;
+        this.position = origin.add(offset);
     }
 
-    update()
+    set origin(newOrigin)
     {
-        
+        this.origin.copyFrom(newOrigin);
+    }
+
+    set offset(newOffset)
+    {
+        this.offset.copyFrom(newOffset);
+    }
+
+    get position()
+    {
+        this.position.copyFrom(this.origin.add(offset));
+        return this.position;
     }
 }
 
 class Extractor {
-    constructor(spawner, origin, direction, rate, memory, scene)
+    constructor(spawner, origin, direction, rate, scale, memory, scene)
     {
         this.spawner = spawner;
         this.origin = origin;
         this.direction = direction;
         this.rate = rate;
+        this.scale = scale;
         this.memory = memory;
-
+        this.points = [];
+        this.colors = [];
+        this.lines = null;
+        
         this.build(scene);
     }
 
     build(scene)
     {
-        
+        for (let i = 1; i <= this.memory; ++i) {
+            let offset = this.direction.scale(this.scale * i);
+            let point = this.origin.add(offset);
+            this.points.push(point);
+            this.colors.push(new BABYLON.Color4(0.5, 0.5, i / this.memory, 1.0));
+        }
+
+        this.lines = BABYLON.MeshBuilder.CreateLines("lines",
+                                                     {
+                                                         points: this.points,
+                                                         colors: this.colors,
+                                                         updatable: true
+                                                     },
+                                                     scene);
     }
 
     update(timeDelta)
     {
-        
+        for (let i = this.points.length - 1; i > 0; --i) {
+            this.points[i].copyFrom(this.points[i - 1]).addInPlace(this.direction.scale(this.scale));
+        }
+        this.points[0].copyFrom(this.spawner.currentSpawnerPosition.add(this.origin).addInPlace(this.direction.scale(this.scale)));
+        this.lines = BABYLON.MeshBuilder.CreateLines("lines",
+                                                     {
+                                                         points: this.points,
+                                                         instance: this.lines
+                                                     });
     }
 }
 
